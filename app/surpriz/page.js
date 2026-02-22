@@ -1,93 +1,114 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const METIN = "Bahar Hanım iyi ki doğdun";
-
-const CONFIG = {
-  flash: 320,
-  showContent: 480,
-  textReveal: 900,
-  corners: 1100,
-  emojiStart: 400,
-  emojiEnd: 2200,
-  ease: [0.25, 0.1, 0.25, 1],
-};
-
-// Pasta ve arka plana uyumlu renkler: pembe, sarı, teal, beyaz
-const RENKLER = [
-  "#f472b6",
-  "#fb7185",
-  "#fef08a",
-  "#fde047",
-  "#5eead4",
-  "#2dd4bf",
-  "#ffffff",
-  "#f9a8d4",
-  "#a78bfa",
+const SUBTITLES = [
+  "Nice mutlu yıllara.",
+  "Bugün her şey senin için.",
+  "İyi ki varsın.",
+  "Kutlamak güzel.",
 ];
 
 function konfeti(confetti, opts = {}) {
   if (!confetti) return;
   confetti({
-    particleCount: opts.count ?? 120,
+    particleCount: opts.count ?? 100,
     spread: opts.spread ?? 100,
     origin: opts.origin ?? { y: 0.5, x: 0.5 },
-    colors: RENKLER,
+    colors: opts.colors ?? ["#f9a8d4", "#fde047", "#fef08a", "#ffffff", "#e879f9"],
     scalar: opts.scalar ?? 0.9,
-    startVelocity: opts.velocity ?? 42,
+    startVelocity: opts.velocity ?? 45,
+    decay: opts.decay ?? 0.96,
     zIndex: 9999,
   });
 }
 
-const KOSE = [
-  { text: "İyi ki doğdun!", side: "left", vertical: "top", place: "12%", d: 0 },
-  { text: "Nice mutlu yıllara!", side: "right", vertical: "top", place: "14%", d: 0.05 },
-  { text: "Bugün senin günün.", side: "left", vertical: "bottom", place: "20%", d: 0.1 },
-  { text: "Kutlama modu açık 🥳", side: "right", vertical: "bottom", place: "18%", d: 0.08 },
-];
-
 export default function SurprizPage() {
-  const [flash, setFlash] = useState(true);
-  const [content, setContent] = useState(false);
-  const [textVisible, setTextVisible] = useState(false);
-  const [cornersVisible, setCornersVisible] = useState(false);
-  const [emojiVisible, setEmojiVisible] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [darkOverlay, setDarkOverlay] = useState(1);
+  const [scene, setScene] = useState(0);
+  const [subtitleIndex, setSubtitleIndex] = useState(0);
+  const confettiRef = useRef(null);
   const timersRef = useRef([]);
 
-  const add = (fn, delay) => {
+  const add = useCallback((fn, delay) => {
     const id = setTimeout(fn, delay);
     timersRef.current.push(id);
-  };
+  }, []);
 
-  useEffect(() => {
+  const runTimeline = useCallback(() => {
     const run = async () => {
       const confetti = (await import("canvas-confetti")).default;
-      konfeti(confetti, { count: 200, spread: 360, scalar: 1, velocity: 50 });
-      add(() => konfeti(confetti, { count: 50, origin: { x: 0.2, y: 0.4 } }), 200);
-      add(() => konfeti(confetti, { count: 50, origin: { x: 0.8, y: 0.4 } }), 350);
-      add(() => konfeti(confetti, { count: 60, origin: { y: 0.6 } }), 600);
-      add(() => konfeti(confetti, { count: 60, origin: { y: 0.6 } }), 1000);
+      confettiRef.current = confetti;
 
-      add(() => setContent(true), CONFIG.showContent);
-      add(() => setTextVisible(true), CONFIG.textReveal);
-      add(() => setCornersVisible(true), CONFIG.corners);
-      add(() => setEmojiVisible(true), CONFIG.emojiStart);
-      add(() => setEmojiVisible(false), CONFIG.emojiEnd);
+      setStarted(true);
+      setScene(1);
+
+      // Karanlıktan aydınlığa yumuşak fade-in (flash yok)
+      add(() => setDarkOverlay(0), 0);
+
+      // Sahne 1: "Bugün özel bir gün..." belirir → kaybolur
+      add(() => setScene(2), 4200);
+
+      // Sahne 2: "İyi ki doğdun"
+      add(() => setScene(3), 7200);
+
+      // Sahne 3: "Bahar Hanım" + ilk konfeti patlaması (merkezden güçlü)
+      add(() => {
+        setScene(3);
+        const c = confettiRef.current;
+        if (c) {
+          konfeti(c, { count: 180, spread: 100, origin: { x: 0.3, y: 0.5 }, velocity: 52 });
+          konfeti(c, { count: 180, spread: 100, origin: { x: 0.7, y: 0.5 }, velocity: 52 });
+        }
+      }, 10200);
+
+      add(() => setScene(4), 10800);
+      // Alt yazı döngüsü (sahne 4’ten sonra)
+      add(() => setSubtitleIndex(0), 10800);
+      add(() => setSubtitleIndex(1), 15800);
+      add(() => setSubtitleIndex(2), 20800);
+      add(() => setSubtitleIndex(3), 25800);
+
+      // İkinci patlama: altın yapraklar, yukarıdan yavaş
+      add(() => {
+        const c = confettiRef.current;
+        if (c) {
+          konfeti(c, {
+            count: 120,
+            spread: 60,
+            origin: { y: 0, x: 0.5 },
+            colors: ["#fde047", "#fef08a", "#facc15", "#eab308", "#fef3c7"],
+            velocity: 22,
+            scalar: 1,
+            decay: 0.98,
+          });
+        }
+      }, 12500);
     };
     run();
+  }, [add]);
+
+  useEffect(() => {
     return () => timersRef.current.forEach(clearTimeout);
   }, []);
 
-  useEffect(() => {
-    const id = setTimeout(() => setFlash(false), CONFIG.flash);
-    return () => clearTimeout(id);
-  }, []);
+  // Firefly / yıldız tozu (sadece started sonrası, çok hafif)
+  const [fireflies] = useState(() =>
+    Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      left: 5 + (i * 7.3) % 88,
+      delay: i * 1.2,
+      duration: 18 + (i % 5),
+      size: 2 + (i % 3),
+      opacity: 0.15 + (i % 4) * 0.08,
+    }))
+  );
 
   return (
     <main
-      className="min-h-[100dvh] h-[100dvh] w-full relative overflow-hidden flex flex-col items-center justify-center bg-[#0f766e]"
+      className="min-h-[100dvh] h-[100dvh] w-full relative overflow-hidden flex flex-col items-center justify-center"
       style={{
         minHeight: "100dvh",
         height: "100dvh",
@@ -96,125 +117,170 @@ export default function SurprizPage() {
       role="main"
       aria-label="Doğum günü kutlaması"
     >
-      {/* Beyaz flash */}
-      <motion.div
-        className="fixed inset-0 z-[10000] bg-white pointer-events-none"
-        initial={{ opacity: 1 }}
-        animate={{ opacity: flash ? 1 : 0 }}
-        transition={{ duration: 0.28, ease: CONFIG.ease }}
-      />
-
-      {/* Arka plan: pastanın arka planına uyumlu mat teal + hafif doku */}
+      {/* Arka plan: koyu gece mavisi / mürdüm */}
       <div
         className="absolute inset-0"
         style={{
-          background: "linear-gradient(180deg, #0f766e 0%, #0d9488 40%, #14b8a6 100%)",
-        }}
-      />
-      <div
-        className="absolute inset-0 opacity-[0.07] pointer-events-none mix-blend-overlay"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          background: "linear-gradient(180deg, #0f0f1a 0%, #1a1625 50%, #16213e 100%)",
         }}
       />
 
-      {/* İçerik: pasta + metin */}
-      <AnimatePresence>
-        {content && (
-          <motion.section
-            className="relative z-10 flex flex-col items-center justify-center px-4 flex-1 w-full max-w-lg"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, ease: CONFIG.ease }}
+      {/* 2–3 yavaş nefes alan pastel ışık (düşük opaklık) */}
+      <motion.div
+        className="absolute rounded-full blur-[120px] pointer-events-none w-[80%] max-w-[500px] h-[60%] -top-[20%] -left-[20%]"
+        style={{ background: "#f9a8d4", opacity: 0.18 }}
+        animate={{ scale: [1, 1.2, 1] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute rounded-full blur-[120px] pointer-events-none w-[70%] max-w-[400px] h-[50%] -top-[10%] -right-[25%]"
+        style={{ background: "#fde047", opacity: 0.14 }}
+        animate={{ scale: [1, 1.15, 1] }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute rounded-full blur-[100px] pointer-events-none w-[50%] max-w-[280px] h-[40%] bottom-[-10%] left-1/2 -translate-x-1/2"
+        style={{ background: "#e879f9", opacity: 0.1 }}
+        animate={{ scale: [1, 1.18, 1] }}
+        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      {/* Karanlıktan aydınlığa yumuşak fade — sadece "Başla" tıklandıktan sonra */}
+      <motion.div
+        className="fixed inset-0 z-[10001] bg-[#0f0f1a] pointer-events-none"
+        initial={false}
+        animate={{ opacity: started ? darkOverlay : 0 }}
+        transition={{ duration: 2.8, ease: [0.25, 0.1, 0.25, 1] }}
+      />
+
+      {/* Başlamak için dokun */}
+      {!started && (
+        <motion.button
+          type="button"
+          onClick={runTimeline}
+          className="relative z-20 flex flex-col items-center gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-2xl p-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <motion.span
+            className="text-5xl sm:text-6xl"
+            animate={{ scale: [1, 1.08, 1] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
           >
-            {/* Pasta görseli */}
-            <motion.div
-              className="relative w-[min(72vw,280px)] mb-6"
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 160, damping: 22, delay: 0.1 }}
-            >
-              <img
-                src="/cake.webp"
-                alt="Doğum günü pastası"
-                className="w-full h-auto object-contain drop-shadow-2xl"
-              />
-            </motion.div>
+            ✉️
+          </motion.span>
+          <span className="text-white/90 text-sm sm:text-base font-medium tracking-wide">
+            Başlamak için dokun
+          </span>
+        </motion.button>
+      )}
 
-            {/* Başlık */}
-            <AnimatePresence>
-              {textVisible && (
-                <motion.h1
-                  className="text-center text-2xl sm:text-3xl md:text-4xl font-black text-white px-2"
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: CONFIG.ease }}
-                  style={{
-                    textShadow: "0 2px 20px rgba(0,0,0,0.2), 0 0 40px rgba(253,224,71,0.15)",
-                  }}
-                >
-                  {METIN}
-                </motion.h1>
-              )}
-            </AnimatePresence>
-            {textVisible && (
+      {/* Sahne içerikleri */}
+      {started && (
+        <>
+          {/* Sahne 1: Bugün özel bir gün... */}
+          <AnimatePresence mode="wait">
+            {scene === 1 && (
               <motion.p
-                className="mt-3 text-white/90 text-sm sm:text-base"
+                key="s1"
+                className="absolute inset-0 flex items-center justify-center text-white/80 text-base sm:text-lg font-light tracking-wide z-10 px-6"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.4 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.2, exit: { duration: 1 } }}
               >
-                Bugün her şey senin için 🎂
+                Bugün özel bir gün...
               </motion.p>
             )}
-          </motion.section>
-        )}
-      </AnimatePresence>
 
-      {/* Köşe yazıları */}
-      {cornersVisible &&
-        KOSE.map((item, i) => (
-          <motion.p
-            key={i}
-            className={`absolute text-sm sm:text-base font-semibold text-white/95 ${
-              item.side === "left" ? "left-4 sm:left-6" : "right-4 sm:right-6"
-            }`}
-            style={{
-              [item.vertical]: item.place,
-            }}
-            initial={{ opacity: 0, x: item.side === "left" ? -16 : 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, delay: item.d, ease: CONFIG.ease }}
-          >
-            {item.text}
-          </motion.p>
-        ))}
-
-      {/* Emoji yağmuru */}
-      {emojiVisible && (
-        <div className="fixed inset-0 pointer-events-none z-[9998] overflow-hidden" aria-hidden>
-          {["🎂", "🎉", "✨", "🎈", "🎁", "🥳", "💖"].flatMap((emoji, i) =>
-            Array.from({ length: 6 }, (_, j) => (
-              <motion.span
-                key={`${i}-${j}`}
-                className="absolute text-2xl sm:text-3xl select-none"
-                initial={{
-                  top: "-8%",
-                  left: `${10 + (i * 12 + j * 4) % 80}%`,
-                  opacity: 0.85,
-                }}
-                animate={{ top: "108%", opacity: 0.15 }}
-                transition={{
-                  duration: 1.4,
-                  delay: j * 0.06 + i * 0.04,
-                  ease: "easeIn",
-                }}
+            {scene === 2 && (
+              <motion.p
+                key="s2"
+                className="absolute inset-0 flex items-center justify-center z-10 px-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1, exit: { duration: 0.6 } }}
               >
-                {emoji}
-              </motion.span>
-            ))
+                <span className="font-serif text-3xl sm:text-4xl md:text-5xl text-white">
+                  İyi ki doğdun
+                </span>
+              </motion.p>
+            )}
+
+            {(scene === 4 || scene === 3) && (
+              <motion.div
+                key="s3"
+                className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 text-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8 }}
+              >
+                <span className="font-serif text-3xl sm:text-4xl md:text-5xl text-white">
+                  İyi ki doğdun
+                </span>
+                <motion.span
+                  className="mt-2 font-serif text-4xl sm:text-5xl md:text-6xl text-white"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.6 }}
+                  style={{
+                    textShadow:
+                      "0 0 30px rgba(253, 224, 71, 0.4), 0 0 60px rgba(251, 191, 36, 0.2), 0 2px 20px rgba(0,0,0,0.3)",
+                    color: "#fef3c7",
+                  }}
+                >
+                  Bahar Hanım
+                </motion.span>
+
+                {/* Alt yazı döngüsü (sahne 4’ten sonra) */}
+                {scene === 4 && (
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={subtitleIndex}
+                      className="mt-6 text-white/70 text-sm sm:text-base font-light"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      {SUBTITLES[subtitleIndex]}
+                    </motion.p>
+                  </AnimatePresence>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Sahne 3’te sadece “Bahar Hanım” henüz (İyi ki doğdun + isim birlikte sonra) */}
+          {/* Yıldız tozu / firefly */}
+          {started && (
+            <div className="fixed inset-0 pointer-events-none z-[9998] overflow-hidden" aria-hidden>
+              {fireflies.map((f) => (
+                <motion.div
+                  key={f.id}
+                  className="absolute rounded-full bg-white"
+                  style={{
+                    left: `${f.left}%`,
+                    width: f.size,
+                    height: f.size,
+                    bottom: "-2%",
+                    opacity: f.opacity,
+                  }}
+                  initial={{ y: 0 }}
+                  animate={{ y: "-120vh" }}
+                  transition={{
+                    duration: f.duration,
+                    delay: f.delay,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                />
+              ))}
+            </div>
           )}
-        </div>
+        </>
       )}
     </main>
   );

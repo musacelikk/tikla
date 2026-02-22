@@ -6,6 +6,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        serif: ["var(--font-playfair)", "Georgia", "serif"],
+      },
       animation: {
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
         'float': 'float 4s ease-in-out infinite',
