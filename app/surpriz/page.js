@@ -24,7 +24,21 @@ function konfeti(confetti, opts = {}) {
   });
 }
 
+// Mobilde performans için daha az element
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const h = () => setIsMobile(mq.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
+  return isMobile;
+}
+
 export default function SurprizPage() {
+  const isMobile = useIsMobile();
   const [started, setStarted] = useState(false);
   const [darkOverlay, setDarkOverlay] = useState(1);
   const [scene, setScene] = useState(0);
@@ -49,34 +63,35 @@ export default function SurprizPage() {
       add(() => setDarkOverlay(0), 0);
 
       // Sahne 1: "Bugün özel bir gün..." belirir → kaybolur
-      add(() => setScene(2), 4200);
+      add(() => setScene(2), 2200);
 
       // Sahne 2: "İyi ki doğdun"
-      add(() => setScene(3), 7200);
+      add(() => setScene(3), 4000);
 
-      // Sahne 3: "Bahar Hanım" + ilk konfeti patlaması (merkezden güçlü)
+      // Sahne 3: "Bahar Hanım" + ilk konfeti (mobilde daha az parçacık)
+      const confettiCount = isMobile ? 80 : 180;
       add(() => {
         setScene(3);
         const c = confettiRef.current;
         if (c) {
-          konfeti(c, { count: 180, spread: 100, origin: { x: 0.3, y: 0.5 }, velocity: 52 });
-          konfeti(c, { count: 180, spread: 100, origin: { x: 0.7, y: 0.5 }, velocity: 52 });
+          konfeti(c, { count: confettiCount, spread: 100, origin: { x: 0.3, y: 0.5 }, velocity: 52 });
+          konfeti(c, { count: confettiCount, spread: 100, origin: { x: 0.7, y: 0.5 }, velocity: 52 });
         }
-      }, 10200);
+      }, 5200);
 
-      add(() => setScene(4), 10800);
+      add(() => setScene(4), 5800);
       // Alt yazı döngüsü (sahne 4’ten sonra)
-      add(() => setSubtitleIndex(0), 10800);
-      add(() => setSubtitleIndex(1), 15800);
-      add(() => setSubtitleIndex(2), 20800);
-      add(() => setSubtitleIndex(3), 25800);
+      add(() => setSubtitleIndex(0), 5800);
+      add(() => setSubtitleIndex(1), 8000);
+      add(() => setSubtitleIndex(2), 10200);
+      add(() => setSubtitleIndex(3), 12400);
 
-      // İkinci patlama: altın yapraklar, yukarıdan yavaş
+      // İkinci patlama: altın yapraklar (mobilde daha az)
       add(() => {
         const c = confettiRef.current;
         if (c) {
           konfeti(c, {
-            count: 120,
+            count: isMobile ? 50 : 120,
             spread: 60,
             origin: { y: 0, x: 0.5 },
             colors: ["#fde047", "#fef08a", "#facc15", "#eab308", "#fef3c7"],
@@ -85,16 +100,16 @@ export default function SurprizPage() {
             decay: 0.98,
           });
         }
-      }, 12500);
+      }, 6800);
     };
     run();
-  }, [add]);
+  }, [add, isMobile]);
 
   useEffect(() => {
     return () => timersRef.current.forEach(clearTimeout);
   }, []);
 
-  // Firefly / yıldız tozu (sadece started sonrası, çok hafif)
+  // Firefly (mobilde 4 tane, daha yavaş)
   const [fireflies] = useState(() =>
     Array.from({ length: 12 }, (_, i) => ({
       id: i,
@@ -105,6 +120,7 @@ export default function SurprizPage() {
       opacity: 0.15 + (i % 4) * 0.08,
     }))
   );
+  const firefliesToShow = isMobile ? fireflies.slice(0, 4) : fireflies;
 
   return (
     <main
@@ -125,25 +141,27 @@ export default function SurprizPage() {
         }}
       />
 
-      {/* 2–3 yavaş nefes alan pastel ışık (düşük opaklık) */}
+      {/* Pastel ışıklar — mobilde daha az blur (performans) ve 2 blob */}
       <motion.div
-        className="absolute rounded-full blur-[120px] pointer-events-none w-[80%] max-w-[500px] h-[60%] -top-[20%] -left-[20%]"
-        style={{ background: "#f9a8d4", opacity: 0.18 }}
+        className={`absolute rounded-full pointer-events-none w-[80%] max-w-[500px] h-[60%] -top-[20%] -left-[20%] ${isMobile ? "blur-[60px]" : "blur-[120px]"}`}
+        style={{ background: "#f9a8d4", opacity: 0.18, willChange: "transform", transform: "translateZ(0)" }}
         animate={{ scale: [1, 1.2, 1] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute rounded-full blur-[120px] pointer-events-none w-[70%] max-w-[400px] h-[50%] -top-[10%] -right-[25%]"
-        style={{ background: "#fde047", opacity: 0.14 }}
-        animate={{ scale: [1, 1.15, 1] }}
         transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
-        className="absolute rounded-full blur-[100px] pointer-events-none w-[50%] max-w-[280px] h-[40%] bottom-[-10%] left-1/2 -translate-x-1/2"
-        style={{ background: "#e879f9", opacity: 0.1 }}
-        animate={{ scale: [1, 1.18, 1] }}
-        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+        className={`absolute rounded-full pointer-events-none w-[70%] max-w-[400px] h-[50%] -top-[10%] -right-[25%] ${isMobile ? "blur-[60px]" : "blur-[120px]"}`}
+        style={{ background: "#fde047", opacity: 0.14, willChange: "transform", transform: "translateZ(0)" }}
+        animate={{ scale: [1, 1.15, 1] }}
+        transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
       />
+      {!isMobile && (
+        <motion.div
+          className="absolute rounded-full blur-[100px] pointer-events-none w-[50%] max-w-[280px] h-[40%] bottom-[-10%] left-1/2 -translate-x-1/2"
+          style={{ background: "#e879f9", opacity: 0.1, willChange: "transform", transform: "translateZ(0)" }}
+          animate={{ scale: [1, 1.18, 1] }}
+          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+        />
+      )}
 
       {/* Karanlıktan aydınlığa yumuşak fade — sadece "Başla" tıklandıktan sonra */}
       <motion.div
@@ -166,7 +184,7 @@ export default function SurprizPage() {
           <motion.span
             className="text-5xl sm:text-6xl"
             animate={{ scale: [1, 1.08, 1] }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+            transition={{ duration: isMobile ? 3.5 : 2.5, repeat: Infinity, ease: "easeInOut" }}
           >
             ✉️
           </motion.span>
@@ -188,7 +206,7 @@ export default function SurprizPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1.2, exit: { duration: 1 } }}
+                transition={{ duration: 0.5, exit: { duration: 0.35 } }}
               >
                 Bugün özel bir gün...
               </motion.p>
@@ -201,7 +219,7 @@ export default function SurprizPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1, exit: { duration: 0.6 } }}
+                transition={{ duration: 0.45, exit: { duration: 0.3 } }}
               >
                 <span className="font-serif text-3xl sm:text-4xl md:text-5xl text-white">
                   İyi ki doğdun
@@ -215,7 +233,7 @@ export default function SurprizPage() {
                 className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 text-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 0.4 }}
               >
                 <span className="font-serif text-3xl sm:text-4xl md:text-5xl text-white">
                   İyi ki doğdun
@@ -224,7 +242,7 @@ export default function SurprizPage() {
                   className="mt-2 font-serif text-4xl sm:text-5xl md:text-6xl text-white"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2, duration: 0.6 }}
+                  transition={{ delay: 0.08, duration: 0.35 }}
                   style={{
                     textShadow:
                       "0 0 30px rgba(253, 224, 71, 0.4), 0 0 60px rgba(251, 191, 36, 0.2), 0 2px 20px rgba(0,0,0,0.3)",
@@ -243,7 +261,7 @@ export default function SurprizPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      transition={{ duration: 0.5 }}
+                      transition={{ duration: 0.35 }}
                     >
                       {SUBTITLES[subtitleIndex]}
                     </motion.p>
@@ -254,10 +272,10 @@ export default function SurprizPage() {
           </AnimatePresence>
 
           {/* Sahne 3’te sadece “Bahar Hanım” henüz (İyi ki doğdun + isim birlikte sonra) */}
-          {/* Yıldız tozu / firefly */}
+          {/* Yıldız tozu — mobilde daha az, daha yavaş */}
           {started && (
-            <div className="fixed inset-0 pointer-events-none z-[9998] overflow-hidden" aria-hidden>
-              {fireflies.map((f) => (
+            <div className="fixed inset-0 pointer-events-none z-[9998] overflow-hidden" aria-hidden style={{ contain: "layout style paint" }}>
+              {firefliesToShow.map((f) => (
                 <motion.div
                   key={f.id}
                   className="absolute rounded-full bg-white"
@@ -267,11 +285,12 @@ export default function SurprizPage() {
                     height: f.size,
                     bottom: "-2%",
                     opacity: f.opacity,
+                    willChange: "transform",
                   }}
                   initial={{ y: 0 }}
                   animate={{ y: "-120vh" }}
                   transition={{
-                    duration: f.duration,
+                    duration: isMobile ? 28 : f.duration,
                     delay: f.delay,
                     repeat: Infinity,
                     ease: "linear",
