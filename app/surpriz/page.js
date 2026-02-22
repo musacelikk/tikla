@@ -3,187 +3,218 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-function konfetiPatlama(confetti) {
+const METIN = "Bahar Hanım iyi ki doğdun";
+
+const CONFIG = {
+  flash: 320,
+  showContent: 480,
+  textReveal: 900,
+  corners: 1100,
+  emojiStart: 400,
+  emojiEnd: 2200,
+  ease: [0.25, 0.1, 0.25, 1],
+};
+
+// Pasta ve arka plana uyumlu renkler: pembe, sarı, teal, beyaz
+const RENKLER = [
+  "#f472b6",
+  "#fb7185",
+  "#fef08a",
+  "#fde047",
+  "#5eead4",
+  "#2dd4bf",
+  "#ffffff",
+  "#f9a8d4",
+  "#a78bfa",
+];
+
+function konfeti(confetti, opts = {}) {
   if (!confetti) return;
-  const count = 200;
-  const defaults = { origin: { y: 0.6 }, zIndex: 9999 };
-
-  function fire(particleRatio, opts) {
-    confetti({
-      ...defaults,
-      ...opts,
-      particleCount: Math.floor(count * particleRatio),
-    });
-  }
-
-  fire(0.25, { spread: 26, startVelocity: 55, colors: ["#ff6b9d", "#c44dff", "#6b5bff", "#00ff88", "#ffd93d"] });
-  fire(0.2, { spread: 60, colors: ["#ff6b9d", "#c44dff", "#6b5bff"] });
-  fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8, colors: ["#ffd93d", "#00ff88", "#ff6b9d"] });
-  fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
-  fire(0.1, { spread: 120, startVelocity: 45 });
-}
-
-function merkezPatlama(confetti) {
-  if (!confetti) return;
-  const scalar = 2;
   confetti({
-    particleCount: 80,
-    scalar,
-    spread: 100,
-    origin: { y: 0.5, x: 0.5 },
-    colors: ["#ff6b9d", "#c44dff", "#6b5bff", "#00ff88", "#ffd93d", "#ff9f43"],
-    shapes: ["circle", "square"],
+    particleCount: opts.count ?? 120,
+    spread: opts.spread ?? 100,
+    origin: opts.origin ?? { y: 0.5, x: 0.5 },
+    colors: RENKLER,
+    scalar: opts.scalar ?? 0.9,
+    startVelocity: opts.velocity ?? 42,
+    zIndex: 9999,
   });
 }
 
+const KOSE = [
+  { text: "İyi ki doğdun!", side: "left", vertical: "top", place: "12%", d: 0 },
+  { text: "Nice mutlu yıllara!", side: "right", vertical: "top", place: "14%", d: 0.05 },
+  { text: "Bugün senin günün.", side: "left", vertical: "bottom", place: "20%", d: 0.1 },
+  { text: "Kutlama modu açık 🥳", side: "right", vertical: "bottom", place: "18%", d: 0.08 },
+];
+
 export default function SurprizPage() {
-  const [mounted, setMounted] = useState(false);
-  const [showMessage, setShowMessage] = useState(false);
-  const [showExtra, setShowExtra] = useState(false);
-  const confettiRef = useRef(null);
+  const [flash, setFlash] = useState(true);
+  const [content, setContent] = useState(false);
+  const [textVisible, setTextVisible] = useState(false);
+  const [cornersVisible, setCornersVisible] = useState(false);
+  const [emojiVisible, setEmojiVisible] = useState(false);
+  const timersRef = useRef([]);
+
+  const add = (fn, delay) => {
+    const id = setTimeout(fn, delay);
+    timersRef.current.push(id);
+  };
 
   useEffect(() => {
-    setMounted(true);
-    let t1, t2, t3, t4, t5;
     const run = async () => {
       const confetti = (await import("canvas-confetti")).default;
-      confettiRef.current = confetti;
+      konfeti(confetti, { count: 200, spread: 360, scalar: 1, velocity: 50 });
+      add(() => konfeti(confetti, { count: 50, origin: { x: 0.2, y: 0.4 } }), 200);
+      add(() => konfeti(confetti, { count: 50, origin: { x: 0.8, y: 0.4 } }), 350);
+      add(() => konfeti(confetti, { count: 60, origin: { y: 0.6 } }), 600);
+      add(() => konfeti(confetti, { count: 60, origin: { y: 0.6 } }), 1000);
 
-      // İlk dev patlama
-      konfetiPatlama(confetti);
-      merkezPatlama(confetti);
-
-      t1 = setTimeout(() => konfetiPatlama(confetti), 400);
-      t2 = setTimeout(() => setShowMessage(true), 300);
-      t3 = setTimeout(() => {
-        merkezPatlama(confetti);
-        konfetiPatlama(confetti);
-      }, 800);
-      t4 = setTimeout(() => setShowExtra(true), 1200);
-      t5 = setTimeout(() => {
-        konfetiPatlama(confetti);
-        merkezPatlama(confetti);
-      }, 1800);
+      add(() => setContent(true), CONFIG.showContent);
+      add(() => setTextVisible(true), CONFIG.textReveal);
+      add(() => setCornersVisible(true), CONFIG.corners);
+      add(() => setEmojiVisible(true), CONFIG.emojiStart);
+      add(() => setEmojiVisible(false), CONFIG.emojiEnd);
     };
     run();
-    return () => {
-      [t1, t2, t3, t4, t5].forEach(clearTimeout);
-    };
+    return () => timersRef.current.forEach(clearTimeout);
   }, []);
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-neutral-500"
-        >
-          Yükleniyor...
-        </motion.p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const id = setTimeout(() => setFlash(false), CONFIG.flash);
+    return () => clearTimeout(id);
+  }, []);
 
   return (
-    <main className="min-h-screen relative flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-[#0a0a0f] overflow-hidden">
-      {/* Arka plan gradient */}
+    <main
+      className="min-h-[100dvh] h-[100dvh] w-full relative overflow-hidden flex flex-col items-center justify-center bg-[#0f766e]"
+      style={{
+        minHeight: "100dvh",
+        height: "100dvh",
+        padding: "env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)",
+      }}
+      role="main"
+      aria-label="Doğum günü kutlaması"
+    >
+      {/* Beyaz flash */}
+      <motion.div
+        className="fixed inset-0 z-[10000] bg-white pointer-events-none"
+        initial={{ opacity: 1 }}
+        animate={{ opacity: flash ? 1 : 0 }}
+        transition={{ duration: 0.28, ease: CONFIG.ease }}
+      />
+
+      {/* Arka plan: pastanın arka planına uyumlu mat teal + hafif doku */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-30"
+        className="absolute inset-0"
         style={{
-          background: "radial-gradient(ellipse 100% 80% at 50% 50%, rgba(255,107,157,0.2), transparent 60%), radial-gradient(ellipse 80% 60% at 20% 80%, rgba(196,77,255,0.15), transparent 50%)",
+          background: "linear-gradient(180deg, #0f766e 0%, #0d9488 40%, #14b8a6 100%)",
+        }}
+      />
+      <div
+        className="absolute inset-0 opacity-[0.07] pointer-events-none mix-blend-overlay"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
         }}
       />
 
+      {/* İçerik: pasta + metin */}
       <AnimatePresence>
-        {showMessage && (
-          <motion.div
-            key="main"
-            initial={{ opacity: 0, scale: 0.3 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 200, damping: 15 }}
-            className="relative z-10 text-center"
+        {content && (
+          <motion.section
+            className="relative z-10 flex flex-col items-center justify-center px-4 flex-1 w-full max-w-lg"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, ease: CONFIG.ease }}
           >
-            <motion.h1
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 mb-4 md:mb-6 px-2"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+            {/* Pasta görseli */}
+            <motion.div
+              className="relative w-[min(72vw,280px)] mb-6"
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 160, damping: 22, delay: 0.1 }}
             >
-              Doğum günün kutlu olsun! 🎂
-            </motion.h1>
-            <motion.p
-              className="text-lg sm:text-xl md:text-2xl text-neutral-300"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              Nice mutlu yıllara! 🎉
-            </motion.p>
-          </motion.div>
+              <img
+                src="/cake.webp"
+                alt="Doğum günü pastası"
+                className="w-full h-auto object-contain drop-shadow-2xl"
+              />
+            </motion.div>
+
+            {/* Başlık */}
+            <AnimatePresence>
+              {textVisible && (
+                <motion.h1
+                  className="text-center text-2xl sm:text-3xl md:text-4xl font-black text-white px-2"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: CONFIG.ease }}
+                  style={{
+                    textShadow: "0 2px 20px rgba(0,0,0,0.2), 0 0 40px rgba(253,224,71,0.15)",
+                  }}
+                >
+                  {METIN}
+                </motion.h1>
+              )}
+            </AnimatePresence>
+            {textVisible && (
+              <motion.p
+                className="mt-3 text-white/90 text-sm sm:text-base"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.4 }}
+              >
+                Bugün her şey senin için 🎂
+              </motion.p>
+            )}
+          </motion.section>
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {showExtra && (
-          <motion.div
-            key="extra"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-8 sm:mt-10 flex flex-wrap justify-center gap-3 sm:gap-4"
+      {/* Köşe yazıları */}
+      {cornersVisible &&
+        KOSE.map((item, i) => (
+          <motion.p
+            key={i}
+            className={`absolute text-sm sm:text-base font-semibold text-white/95 ${
+              item.side === "left" ? "left-4 sm:left-6" : "right-4 sm:right-6"
+            }`}
+            style={{
+              [item.vertical]: item.place,
+            }}
+            initial={{ opacity: 0, x: item.side === "left" ? -16 : 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: item.d, ease: CONFIG.ease }}
           >
-            {["🎂", "🎉", "✨", "🎈", "🎁", "💖"].map((emoji, i) => (
+            {item.text}
+          </motion.p>
+        ))}
+
+      {/* Emoji yağmuru */}
+      {emojiVisible && (
+        <div className="fixed inset-0 pointer-events-none z-[9998] overflow-hidden" aria-hidden>
+          {["🎂", "🎉", "✨", "🎈", "🎁", "🥳", "💖"].flatMap((emoji, i) =>
+            Array.from({ length: 6 }, (_, j) => (
               <motion.span
-                key={emoji}
-                className="text-3xl sm:text-4xl md:text-5xl"
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 * i, type: "spring", stiffness: 200 }}
-                whileHover={{ scale: 1.3, rotate: 15 }}
+                key={`${i}-${j}`}
+                className="absolute text-2xl sm:text-3xl select-none"
+                initial={{
+                  top: "-8%",
+                  left: `${10 + (i * 12 + j * 4) % 80}%`,
+                  opacity: 0.85,
+                }}
+                animate={{ top: "108%", opacity: 0.15 }}
+                transition={{
+                  duration: 1.4,
+                  delay: j * 0.06 + i * 0.04,
+                  ease: "easeIn",
+                }}
               >
                 {emoji}
               </motion.span>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Ekstra akan metinler - ekranın kenarlarında */}
-      {showExtra && (
-        <>
-          <motion.p
-            className="absolute left-2 sm:left-4 top-1/4 text-sm sm:text-base text-pink-400/80 font-semibold -rotate-12"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.8 }}
-          >
-            🎂 Kutlu olsun!
-          </motion.p>
-          <motion.p
-            className="absolute right-2 sm:right-4 top-1/3 text-sm sm:text-base text-purple-400/80 font-semibold rotate-12"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1 }}
-          >
-            Nice yıllara! 🎉
-          </motion.p>
-          <motion.p
-            className="absolute left-3 sm:left-6 bottom-1/3 text-sm sm:text-base text-amber-400/80 font-semibold -rotate-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2 }}
-          >
-            ✨ Senin günün!
-          </motion.p>
-          <motion.p
-            className="absolute right-3 sm:right-6 bottom-1/4 text-sm sm:text-base text-cyan-400/80 font-semibold rotate-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.4 }}
-          >
-            🎁 Sürpriz!
-          </motion.p>
-        </>
+            ))
+          )}
+        </div>
       )}
     </main>
   );

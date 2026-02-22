@@ -3,9 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --bg-dark: #0a0a0f;
-  --glow: #ff6b9d;
-  --glow-2: #c44dff;
+  --bg-aurora: linear-gradient(160deg, #fdf2f8 0%, #f3e8ff 35%, #e0e7ff 70%, #e0f2fe 100%);
+  --blob-pink: #f9a8d4;
+  --blob-purple: #c4b5fd;
+  --blob-turquoise: #67e8c0;
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-bg: rgba(255, 255, 255, 0.25);
 }
 
 * {
@@ -21,17 +24,46 @@ body {
 }
 
 body {
-  background: var(--bg-dark);
   min-height: 100vh;
 }
 
-/* Konfeti canvas tam ekran */
+/* Konfeti canvas tam ekran (mobil dahil) */
 canvas {
   position: fixed !important;
   top: 0;
   left: 0;
   width: 100vw !important;
   height: 100vh !important;
+  height: 100dvh !important;
   pointer-events: none;
   z-index: 9999;
+}
+
+/* Glass kart */
+.glass-card {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+/* Başlık hafif glow */
+.title-glow {
+  filter: drop-shadow(0 0 20px rgba(196, 181, 253, 0.35));
+}
+
+/* Sürpriz ekranı merkez başlık — tutarlı gradient + glow */
+.surpriz-baslik {
+  color: transparent;
+  background: linear-gradient(105deg, #db2777 0%, #7c3aed 45%, #2563eb 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  filter: drop-shadow(0 0 16px rgba(124, 58, 237, 0.3));
+}
+
+.surpriz-baslik-son {
+  filter: drop-shadow(0 0 20px rgba(124, 58, 237, 0.35));
 }
